@@ -19,14 +19,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
+
+      - name: Find project folder
+        id: dir
+        run: |
+          if [ -f package.json ]; then
+            echo "dir=." >> $GITHUB_OUTPUT
+          else
+            FOUND=$(find . -maxdepth 3 -name package.json -not -path "*/node_modules/*" | head -1)
+            if [ -z "$FOUND" ]; then echo "::error::package.json not found anywhere in the repo"; exit 1; fi
+            echo "dir=$(dirname $FOUND)" >> $GITHUB_OUTPUT
+          fi
+          cat $GITHUB_OUTPUT
+
       - run: npm install
+        working-directory: ${{ steps.dir.outputs.dir }}
+
       - run: npm run build
+        working-directory: ${{ steps.dir.outputs.dir }}
+
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: ${{ steps.dir.outputs.dir }}/dist
 
   deploy:
     needs: build
