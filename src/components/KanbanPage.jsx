@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { useApp } from '../App'
-import { api, isUrgent, fmtCountdown } from '../api'
+import { api, isUrgent, fmtCountdown, hoursUntil } from '../api'
 import { TierBadge } from './LeadsPage'
 
 export default function KanbanPage() {
   const { leads, meta, setEditingLead, loadLeads, toast, permissions } = useApp()
   const [dragId, setDragId] = useState(null)
   const [overStage, setOverStage] = useState(null)
+
+  const ACTIVE_STAGES = ['Outreach', 'Meeting Scheduled', 'Visit Completed', 'Quotation Requested', 'Proposal Sent']
 
   async function drop(stage) {
     setOverStage(null)
@@ -15,6 +17,29 @@ export default function KanbanPage() {
     setDragId(null)
     if (!lead || lead.stage === stage) return
     if (!permissions.editLeads) { toast('You do not have permission to move leads', 'urgent'); return }
+
+    /* ---- DATA GUARDRAILS (same rules as the lead form) ---- */
+    // 1. Leaving Lead Generation requires decision maker + phone
+    if (stage !== 'Lead Generation' && stage !== 'Rejected' && (!lead.dmName || !(lead.phone || lead.dmPhone))) {
+      toast('Fill Decision Maker & phone before moving this lead forward', 'urgent')
+      setEditingLead({ ...lead, stage })
+      return
+    }
+    // 2. Rejected requires a loss reason → open the form with the reason field required
+    if (stage === 'Rejected' && !lead.lossReason) {
+      toast('Select a Loss Reason to reject this lead', 'warn')
+      setEditingLead({ ...lead, stage: 'Rejected' })
+      return
+    }
+    // 3. Active stages require a future next action date
+    if (ACTIVE_STAGES.includes(stage)) {
+      const h = hoursUntil(lead.nextActionDate)
+      if (h === null || h <= 0) {
+        toast('Set a future Next Action Date to move this lead here', 'warn')
+        setEditingLead({ ...lead, stage })
+        return
+      }
+    }
 
     const updates = { id: lead.id, stage }
     if (stage === 'Visit Completed') updates.visitStatus = 'Visited'

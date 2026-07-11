@@ -55,6 +55,28 @@ export function fmtDate(dateStr) {
   return d.toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
+/**
+ * BUG FIX — Date sync: Google Sheets returns dates as full ISO strings
+ * ("2026-07-13T12:00:00.000Z"). <input type="datetime-local"> only accepts
+ * "YYYY-MM-DDTHH:mm" and silently renders BLANK for anything else.
+ * These helpers convert any stored value to the exact local format inputs need.
+ */
+const pad = (n) => String(n).padStart(2, '0')
+
+export function toInputDateTime(v) {
+  if (!v) return ''
+  const d = new Date(v)
+  if (isNaN(d)) return ''
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+export function toInputDate(v) {
+  if (!v) return ''
+  const d = new Date(v)
+  if (isNaN(d)) return ''
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+}
+
 export function fmtCountdown(dateStr) {
   const h = hoursUntil(dateStr)
   if (h === null) return ''

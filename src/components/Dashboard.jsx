@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useApp } from '../App'
-import { api, isUrgent, fmtCountdown, fmtDate } from '../api'
+import { api, isUrgent, isToday, fmtCountdown, fmtDate } from '../api'
 
 export default function Dashboard() {
   const { leads, meta, user, permissions, setEditingLead, setPage } = useApp()
@@ -31,6 +31,19 @@ export default function Dashboard() {
     return personal || targets.find(t => t.scope === 'global') || {}
   }, [targets, user])
 
+  /* "Tasks for Today" — personal daily briefing for the logged-in user */
+  const today = useMemo(() => {
+    const mine = leads.filter(l =>
+      isToday(l.nextActionDate) &&
+      l.assignedTo === user.username &&
+      l.stage !== 'Deal Closed' && l.stage !== 'Rejected'
+    )
+    const calls = mine.filter(l => ['Call', 'Follow-up'].includes(l.nextActionType))
+    const visits = mine.filter(l => ['Visit', 'Meeting'].includes(l.nextActionType))
+    const other = mine.filter(l => !calls.includes(l) && !visits.includes(l))
+    return { mine, calls, visits, other }
+  }, [leads, user])
+
   const urgentLeads = useMemo(
     () => leads.filter(isUrgent).sort((a, b) => new Date(a.nextActionDate) - new Date(b.nextActionDate)),
     [leads]
@@ -54,6 +67,31 @@ export default function Dashboard() {
         </div>
         <button onClick={() => setEditingLead({})} className="bg-brand-blue hover:bg-brand-blue-dark text-white text-sm font-semibold px-4 py-2 rounded-lg">+ New school lead</button>
       </header>
+
+      {/* Tasks for Today */}
+      {today.mine.length > 0 && (
+        <section className="bg-gradient-to-r from-brand-blue/15 to-navy-800 border border-brand-blue/40 rounded-xl px-5 py-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-2xl">📋</span>
+            <div className="flex-1 min-w-48">
+              <div className="font-display font-bold text-white">
+                Today you have {today.calls.length} follow-up call{today.calls.length !== 1 && 's'} and {today.visits.length} scheduled visit{today.visits.length !== 1 && 's'}
+                {today.other.length > 0 && ` (+${today.other.length} other task${today.other.length !== 1 ? 's' : ''})`}
+              </div>
+              <div className="text-xs text-slate-400 mt-0.5">Tap a school to open it</div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2 mt-3">
+            {today.mine.map(l => (
+              <button key={l.id} onClick={() => setEditingLead(l)}
+                className="bg-navy-900/70 hover:bg-navy-900 border border-navy-600 rounded-lg px-3 py-1.5 text-xs">
+                <span className="font-semibold text-white">{l.schoolName}</span>
+                <span className="text-slate-400"> · {l.nextActionType || 'Task'} · {fmtDate(l.nextActionDate)}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* KPI cards with target progress */}
       <div className="grid grid-cols-4 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-4">

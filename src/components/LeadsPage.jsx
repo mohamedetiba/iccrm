@@ -89,18 +89,14 @@ export default function LeadsPage() {
       </div>
 
       {/* Table */}
-      <div className="bg-navy-900 border border-navy-700 rounded-xl overflow-x-auto">
+      {/* max-height scroll container so the sticky header works while scrolling long lists */}
+      <div className="bg-navy-900 border border-navy-700 rounded-xl overflow-auto max-h-[calc(100vh-290px)]">
         <table className="w-full text-sm min-w-[900px]">
-          <thead>
-            <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b border-navy-700">
-              <th className="px-4 py-3">School</th>
-              <th className="px-3 py-3">Region</th>
-              <th className="px-3 py-3">Curriculum</th>
-              <th className="px-3 py-3">Tier</th>
-              <th className="px-3 py-3">Stage</th>
-              <th className="px-3 py-3">Decision maker</th>
-              <th className="px-3 py-3">Next action</th>
-              <th className="px-3 py-3">Assigned</th>
+          <thead className="sticky top-0 z-10">
+            <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500">
+              {['School', 'Region', 'Curriculum', 'Tier', 'Stage', 'Decision maker', 'Next action', 'Assigned'].map((h, i) => (
+                <th key={h} className={(i === 0 ? 'px-4' : 'px-3') + ' py-3 bg-navy-900 border-b border-navy-700 shadow-[0_1px_0_0_rgba(37,48,82,1)]'}>{h}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
